@@ -63,7 +63,7 @@ Click-based controls have been implemented for easy, mouse-only interaction:
 3. Share your **Hamachi IP address** (shown in Hamachi).
 4. Run `start.bat`, then visit the `Your Network` link
 
-### 🚂 Option 3: Hosting on Render (Free Cloud Hosting)
+### 🚂 Option 3: Hosting on Render or any other Cloud Hosting Service (Not Recommended)
 
 1. Go to [Render](https://render.com).
 2. Create a new project → Deploy from GitHub.
