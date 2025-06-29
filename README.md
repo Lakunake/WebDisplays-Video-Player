@@ -113,3 +113,4 @@ See [LICENSE](LICENSE) for more details.
 
 Created by **Lakunake**
 Built with ❤️ using Node.js, Express, and Socket.IO
+Contact me at JohnWebdisplay@gmail.com
