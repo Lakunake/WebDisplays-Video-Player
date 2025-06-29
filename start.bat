@@ -1,83 +1,167 @@
 @echo off
+title Minecraft Video Sync Manager
+color 0a
 setlocal enabledelayedexpansion
 
-REM ╔══════════════════════════════════════════════╗
-REM ║      WebDisplays Video Player Starter       ║
-REM ╚══════════════════════════════════════════════╝
+:: =================================================================
+:: Get script location and set working directory
+:: =================================================================
+set "batchdir=%~dp0"
+cd /d "%batchdir%"
+echo Running from: %cd%
 
-REM === Auto-locate current folder ===
-set "base_dir=%~dp0"
-cd /d "%base_dir%"
-
-REM === Read config.txt (if present) ===
-set "port=3000"
-if exist "config.txt" (
-    for /f "usebackq tokens=1,2 delims==" %%A in ("config.txt") do (
-        if /I "%%A"=="port" set "port=%%B"
-    )
-)
-
-REM === Check for Node.js ===
-where node >nul 2>nul
-if errorlevel 1 (
+:: =================================================================
+:: Check Node.js installation
+:: =================================================================
+echo Checking Node.js installation...
+where node >nul 2>&1
+if %errorlevel% neq 0 (
     echo.
-    echo Node.js is NOT installed. Please install Node.js from https://nodejs.org/
+    echo ERROR: Node.js is not installed or not in PATH!
+    echo Please download and install Node.js from:
+    echo https://nodejs.org/
+    echo.
     pause
-    exit /b
+    exit /b 1
 )
 
-REM === Auto-install modules if not present ===
-if not exist "%base_dir%node_modules" (
-    echo.
-    echo Installing required modules...
+:: =================================================================
+:: Initialize configuration
+:: =================================================================
+if not exist config.txt (
+    echo Creating default configuration...
+    echo max_clients: 4 > config.txt
+    echo video_file: filmeva.mp4 >> config.txt
+    echo chunk_size: 10 >> config.txt
+    echo port: 3000 >> config.txt
+    echo volume_step: 5 >> config.txt
+    echo skip_seconds: 10 >> config.txt
+    echo Default config created
+)
+
+:: =================================================================
+:: Create folders if needed
+:: =================================================================
+if not exist videos (
+    mkdir videos
+    echo Created videos directory
+)
+
+:: =================================================================
+:: Install dependencies
+:: =================================================================
+if not exist node_modules (
+    echo Installing Node.js dependencies...
     call npm install
+    echo Dependencies installed
 )
 
-REM === Detect Hamachi IPv4 ===
-set "hamachi=Not Found"
-set "foundHamachi="
-for /f "tokens=*" %%L in ('ipconfig 2^>nul') do (
-    echo %%L | findstr /I "Hamachi" >nul && set "foundHamachi=1"
-    if defined foundHamachi (
-        echo %%L | findstr /C:"IPv4 Address" >nul && (
-            for /f "tokens=2 delims=:" %%A in ("%%L") do (
-                set "hamachi=%%A"
-                set "hamachi=!hamachi: =!"
-                set "foundHamachi="
-            )
-        )
-    )
+:: =================================================================
+:: Read configuration
+:: =================================================================
+set MAX_CLIENTS=4
+set VIDEO_FILE=filmeva.mp4
+set CHUNK_SIZE=10
+set PORT=3000
+set VOLUME_STEP=5
+set SKIP_SECONDS=10
+
+for /f "tokens=1,* delims=: " %%a in ('type config.txt ^| findstr /v "^#"') do (
+    if "%%a"=="max_clients" set MAX_CLIENTS=%%b
+    if "%%a"=="video_file" set VIDEO_FILE=%%b
+    if "%%a"=="chunk_size" set CHUNK_SIZE=%%b
+    if "%%a"=="port" set PORT=%%b
+    if "%%a"=="volume_step" set VOLUME_STEP=%%b
+    if "%%a"=="skip_seconds" set SKIP_SECONDS=%%b
 )
 
-REM === Determine which IP to show ===
-if not "!hamachi!"=="Not Found" (
-    set "displayType=Hamachi"
-    set "displayIP=!hamachi!"
+:: =================================================================
+:: Check FFmpeg installation
+:: =================================================================
+echo Checking FFmpeg installation...
+where ffmpeg >nul 2>&1
+if %errorlevel% neq 0 (
+    echo.
+    echo [WARNING]: FFMPEG IS NOT INSTALLED!
+    echo Some video formats may not play correctly.
+    echo Install FFmpeg from: https://ffmpeg.org/
+    echo.
+    timeout /t 5 >nul
+)
+
+:: =================================================================
+:: Check firewall rule status
+:: =================================================================
+echo Checking firewall rule for port %PORT%...
+set FIREWALL_RULE_EXISTS=0
+netsh advfirewall firewall show rule name="Node.js WebDisplay" >nul 2>&1 && set FIREWALL_RULE_EXISTS=1
+
+if %FIREWALL_RULE_EXISTS% equ 1 (
+    echo Firewall rule exists
 ) else (
-    REM Fetch Local IP
-    set "localip=Not Found"
-    for /f "tokens=2 delims=:" %%f in ('ipconfig ^| findstr /c:"IPv4 Address" 2^>nul') do (
-        set "localip=%%f"
-        goto :gotLocal
+    echo Firewall rule does not exist
+    net session >nul 2>&1
+    if %errorlevel% equ 0 (
+        echo Adding firewall rule...
+        netsh advfirewall firewall add rule name="Node.js WebDisplay" dir=in action=allow protocol=TCP localport=%PORT%
+        echo Rule added for port %PORT%
+    ) else (
+        echo.
+        echo [WARNING]: ADMIN PRIVILEGES REQUIRED FOR FIREWALL CONFIGURATION!
+        echo No firewall rule exists for port %PORT%.
+        echo Server may not be accessible from other devices.
+        echo.
+        echo To fix: Run this script as Administrator
+        echo.
+        timeout /t 5 >nul
     )
-    :gotLocal
-    set "localip=!localip: =!"
-    set "displayType=Local"
-    set "displayIP=!localip!"
 )
 
-REM === Fetch Public IP ===
-set "publicip=Unavailable"
-for /f "tokens=* delims=" %%i in ('powershell -Command "(Invoke-RestMethod -Uri 'https://api.ipify.org')" 2^>nul') do set publicip=%%i
+:: =================================================================
+:: Verify video file exists
+:: =================================================================
+if not exist "videos\%VIDEO_FILE%" (
+    echo.
+    echo ERROR: Video file not found!
+    echo Expected: videos\%VIDEO_FILE%
+    dir /b videos
+    echo.
+    pause
+    exit /b 1
+)
 
-REM === Output simplified message ===
-echo.
-echo    %displayType% IP    : http://%displayIP%:%port%
-echo    Public IP    : http://%publicip%:%port%
-echo.
+:: =================================================================
+:: Get local IP address
+:: =================================================================
+echo Getting local IP address...
+set LOCAL_IP=
+for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /C:"IPv4 Address"') do (
+    set "LOCAL_IP=%%a"
+    set LOCAL_IP=!LOCAL_IP: =!
+    goto :ip_found
+)
 
-REM === Start the server ===
-echo Starting server on port %port%...
-node server.js
-pause
-exit /b
+:ip_found
+if "%LOCAL_IP%"=="" set LOCAL_IP=localhost
+
+:: =================================================================
+:: Display server information
+:: =================================================================
+echo.
+echo Minecraft Video Sync Server
+echo ==========================
+echo.
+echo Settings:
+echo - Max Clients: %MAX_CLIENTS%
+echo - Video File: videos\%VIDEO_FILE%
+echo - Chunk Size: %CHUNK_SIZE% MB
+echo - Server Port: %PORT%
+echo - Volume Step: %VOLUME_STEP%%
+echo - Skip Seconds: %SKIP_SECONDS%s
+echo.
+echo Access URLs:
+echo - This computer: http://localhost:%PORT%
+echo - Your network: http://%LOCAL_IP%:%PORT%
+echo.
+echo Starting Server...
+node server.js %MAX_CLIENTS% %CHUNK_SIZE% %PORT% %VOLUME_STEP% %SKIP_SECONDS% "%VIDEO_FILE%"
