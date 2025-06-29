@@ -11,6 +11,7 @@ A FULLY synchronized HTML5 video player for Minecraft's WebDisplays mod using No
 ## 🚀 Requirements
 
 * [Node.js](https://nodejs.org/) installed on your machine (v16+ recommended)
+* [ffmpeg](https://ffmpeg.org/) installed on your machine for 1.3 and further versions (7.1 below is not tested)
 * A `.mp4` video file named `filmeva.mp4` placed in the `/videos/` folder
 
 ---
@@ -18,9 +19,10 @@ A FULLY synchronized HTML5 video player for Minecraft's WebDisplays mod using No
 ## 🎮 Features
 
 * 📺 MP4 video streaming via HTML5 `<video>` tag
+* ✨ 15mbps of bitrate in 1.3!(better than netflix's most expensive subscription)
 * 🔁 Real-time playback synchronization using Socket.IO
 * ⎯️ Syncs `play`, `pause`, and `seek` events across all connected users
-* 📡 Can be used over LAN, Hamachi, or hosted publicly (Railway etc.)
+* 📡 Can be used over LAN, Hamachi, or hosted publicly (Render etc.)
 * ⚙️ Lightweight Node.js + Express server
 * 🖱️ Custom video control zones (click-based)
 
