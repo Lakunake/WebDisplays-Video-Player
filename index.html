@@ -1,22 +1,13 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Minecraft Synced Video</title>
+  <title>Synced Video</title>
   <style>
-    html, body, video {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      background: #000;
-      overflow: hidden;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    video {
-      object-fit: contain;
-    }
+    html, body { margin:0; padding:0; background:black; height:100%; overflow:hidden; }
+    video { width:100%; height:100%; background:black; }
+    video::-webkit-media-controls,
+    video::-moz-media-controls { display:none!important; }
     #status {
       position: absolute;
       top: 10px;
@@ -39,163 +30,117 @@
   </style>
 </head>
 <body>
-  <!-- Removed the 'muted' attribute from the video tag -->
-  <video id="video" autoplay preload="auto">
-    <!-- Source will be set dynamically -->
+  <video id="video" autoplay>
+    <source src="/videos/filmeva.mp4" type="video/mp4">
   </video>
   
-  <div id="status">Paused at 0.00 seconds</div>
+  <div id="status">Paused</div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    // DOM elements
     const video = document.getElementById('video');
     const statusEl = document.getElementById('status');
     const socket = io();
     
-    // Configuration from server
-    let CONFIG = {
-      BASE_WIDTH: 1920,
-      EDGE_ZONE: 87,
-      PAUSE_ZONE: 75,
-      REWIND_AMOUNT: 10,
-      FORWARD_AMOUNT: 10,
-      VOLUME_STEP: 0.05,
-      MESSAGE_DURATION: 2000,
-      DRIFT_THRESHOLD: 0.5,
-      VIDEO_FILE: 'filmeva.mp4'
-    };
-
-    // Receive config from server
-    socket.on('config', (serverConfig) => {
-      CONFIG.VOLUME_STEP = serverConfig.volumeStep / 100;
-      CONFIG.REWIND_AMOUNT = serverConfig.skipSeconds;
-      CONFIG.FORWARD_AMOUNT = serverConfig.skipSeconds;
-    });
-
-    // Set video source after config
-    socket.on('connect', () => {
-      video.innerHTML = `<source src="/videos/${CONFIG.VIDEO_FILE}" type="video/mp4">`;
-    });
-
     // State variables
+    let lastUpdate = 0;
     let uiTimeout = null;
-    let lastPausedTime = 0;
-
+    
     // Initialize player
     video.currentTime = 1;
     video.volume = 0.5;
     
-    // Start playback
-    video.play().catch(e => {
-      showTemporaryMessage("Click to play", 0);
-      document.addEventListener('click', initPlayback, { once: true });
-    });
-
-    function initPlayback() {
-      video.play().catch(e => showTemporaryMessage("Play error: " + e.message, CONFIG.MESSAGE_DURATION));
-    }
-
-    // UI control functions
-    function showTemporaryMessage(message, duration = CONFIG.MESSAGE_DURATION) {
+    // UI functions
+    function showTemporaryMessage(message, duration = 2000) {
       clearTimeout(uiTimeout);
       statusEl.textContent = message;
       statusEl.classList.add('visible');
       
       if (duration > 0) {
         uiTimeout = setTimeout(() => {
-          if (!video.paused) statusEl.classList.remove('visible');
+          statusEl.classList.remove('visible');
         }, duration);
       }
     }
     
-    function showPausedState() {
-      statusEl.textContent = `Paused at ${video.currentTime.toFixed(2)} seconds`;
-      statusEl.classList.add('visible');
-    }
-    
-    function hideUI() {
-      statusEl.classList.remove('visible');
-    }
-
-    // Synchronization
-    function syncWithServer(state) {
-      if (Math.abs(video.currentTime - state.currentTime) > CONFIG.DRIFT_THRESHOLD) {
-        video.currentTime = state.currentTime;
-      }
-      
-      if (state.isPlaying && video.paused) {
-        video.play().catch(e => showTemporaryMessage("Play error: " + e.message, CONFIG.MESSAGE_DURATION));
-      } else if (!state.isPlaying && !video.paused) {
-        video.pause();
-      }
-    }
-
+    // Send control event to server
     function sendControlEvent() {
       socket.emit('control', {
         isPlaying: !video.paused,
         currentTime: video.currentTime
       });
     }
-
+    
+    // Handle server sync events
+    socket.on('sync', (state) => {
+      // Prevent feedback loops
+      const now = Date.now();
+      if (now - lastUpdate < 100) return;
+      lastUpdate = now;
+      
+      // Sync playback state
+      if (state.isPlaying && video.paused) {
+        video.play();
+      } else if (!state.isPlaying && !video.paused) {
+        video.pause();
+        showTemporaryMessage("Paused", 0);
+      }
+      
+      // Sync time position
+      if (Math.abs(video.currentTime - state.currentTime) > 0.5) {
+        video.currentTime = state.currentTime;
+      }
+    });
+    
     // Event listeners
     video.addEventListener('play', () => {
-      hideUI();
+      statusEl.classList.remove('visible');
       sendControlEvent();
     });
     
     video.addEventListener('pause', () => {
-      lastPausedTime = video.currentTime;
-      showPausedState();
+      showTemporaryMessage("Paused", 0);
       sendControlEvent();
     });
     
     video.addEventListener('seeked', sendControlEvent);
     
-    // Server sync
-    socket.on('sync', syncWithServer);
-    
     // Control zones
-    function getControlZones() {
-      const width = window.innerWidth;
-      const scale = width / CONFIG.BASE_WIDTH;
-      return {
-        edgeZone: Math.max(30, CONFIG.EDGE_ZONE * scale),
-        pauseZone: Math.max(40, CONFIG.PAUSE_ZONE * scale)
-      };
-    }
-
-    // Click handling
     document.addEventListener('click', (e) => {
-      const width = window.innerWidth;
-      const center = width / 2;
-      const zones = getControlZones();
+      const w = window.innerWidth;
+      const x = e.clientX;
+      const center = w / 2;
+      const edgeZone = 87;
+      const pauseZone = 75;
       
       // Left edge: Rewind
-      if (e.clientX < zones.edgeZone) {
-        video.currentTime = Math.max(0, video.currentTime - CONFIG.REWIND_AMOUNT);
-        showTemporaryMessage(`Rewind ${CONFIG.REWIND_AMOUNT}s`);
+      if (x <= edgeZone) {
+        video.currentTime = Math.max(0, video.currentTime - 5);
+        showTemporaryMessage("↩ Rewind 5s");
         sendControlEvent();
       } 
       // Right edge: Skip
-      else if (e.clientX > width - zones.edgeZone) {
-        video.currentTime = Math.min(video.duration, video.currentTime + CONFIG.FORWARD_AMOUNT);
-        showTemporaryMessage(`Skip ${CONFIG.FORWARD_AMOUNT}s`);
+      else if (x >= w - edgeZone) {
+        video.currentTime = Math.min(video.duration, video.currentTime + 5);
+        showTemporaryMessage("↪ Skip 5s");
         sendControlEvent();
       }
       // Center: Play/Pause
-      else if (e.clientX > center - zones.pauseZone && e.clientX < center + zones.pauseZone) {
-        if (video.paused) video.play();
-        else video.pause();
+      else if (x >= center - pauseZone && x <= center + pauseZone) {
+        if (video.paused) {
+          video.play();
+        } else {
+          video.pause();
+        }
       }
       // Left half: Volume Down
-      else if (e.clientX < center) {
-        video.volume = Math.max(0, video.volume - CONFIG.VOLUME_STEP);
+      else if (x < center) {
+        video.volume = Math.max(0, video.volume - 0.05);
         showTemporaryMessage(`Volume: ${Math.round(video.volume * 100)}%`);
       }
       // Right half: Volume Up
       else {
-        video.volume = Math.min(1, video.volume + CONFIG.VOLUME_STEP);
+        video.volume = Math.min(1, video.volume + 0.05);
         showTemporaryMessage(`Volume: ${Math.round(video.volume * 100)}%`);
       }
     });
@@ -204,17 +149,9 @@
     setInterval(() => {
       if (!socket.connected) {
         socket.connect();
-        showTemporaryMessage("Reconnecting...", CONFIG.MESSAGE_DURATION);
+        showTemporaryMessage("Reconnecting...");
       }
     }, 5000);
-    
-    // Update paused time display
-    setInterval(() => {
-      if (video.paused && lastPausedTime !== video.currentTime) {
-        lastPausedTime = video.currentTime;
-        showPausedState();
-      }
-    }, 1000);
   </script>
 </body>
 </html>
