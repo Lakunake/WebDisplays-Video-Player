@@ -19,7 +19,7 @@ A FULLY synchronized HTML5 video player for Minecraft's WebDisplays mod using No
 ## 🎮 Features
 
 * 📺 MP4 video streaming via HTML5 `<video>` tag
-* ✨ 15mbps of bitrate in 1.3!(better than netflix's most expensive subscription)
+* ✨ VERY High Quality support in 1.3+ thanks to ffmpeg!
 * 🔁 Real-time playback synchronization using Socket.IO
 * ⎯️ Syncs `play`, `pause`, and `seek` events across all connected users
 * 📡 Can be used over LAN, Hamachi, or hosted publicly (Render etc.)
