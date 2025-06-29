@@ -1,21 +1,21 @@
-# WebDisplays Video Player Configuration
+# Minecraft Video Sync Configuration
+# Format: key: value  (space after colon is optional)
+# Lines starting with # are comments
 
-# This file controls how the launcher script behaves.
-# Leave a setting blank or commented out to use automatic detection.
+# Number of expected clients (1-50)
+max_clients: 1
 
-# Example: C:\Users\YourName\Documents\WebDisplays-Video-Player
-# If empty, the batch script auto-detects its own folder
-server_path=
+# Video file name in videos folder (include extension)
+video_file: filmeva.mp4
 
-# Set a custom port (optional). Defaults to 3000 if blank, 3000 is the recommended so best if left blank
-# Example:
-port=3000
+# Video chunk size in MB (5-50)
+chunk_size: 10
 
-# Whether to auto-install missing node modules (true/false)
-auto_install=true
+# Server port (1024-49151)
+port: 3000
 
-# Whether to check if Node.js is installed (true/false)
-check_node=true
+# Volume step percentage (1-20)
+volume_step: 5
 
-# Whether to open the site in the default browser after launching (true/false)
-open_browser=false
+# Rewind/Skip seconds (5-60)
+skip_seconds: 5
