@@ -11,7 +11,7 @@ A FULLY synchronized HTML5 video player for Minecraft's WebDisplays mod using No
 ## 🚀 Requirements
 
 * [Node.js](https://nodejs.org/) installed on your machine (v16+ recommended)
-* [ffmpeg](https://ffmpeg.org/) installed on your machine for 1.3 and further versions (7.1 below is not tested)
+* [ffmpeg](https://ffmpeg.org/) installed on your machine for 1.3 and further versions if you want high bitrate support (7.1 below is not tested)
 * A `.mp4` video file named `filmeva.mp4` placed in the `/videos/` folder
 
 ---
@@ -52,39 +52,16 @@ Click-based controls have been implemented for easy, mouse-only interaction:
 
 ### 🔌 Option 1: LAN or Public IP (Direct Hosting)
 
-1. Run `server.js` by opening CMD in your folder and typing:
-
-   ```bash
-   node server.js
-   ```
-2. Make sure port `3000` is open in your firewall/router.
-3. Get your **public IP** from [https://whatismyipaddress.com](https://whatismyipaddress.com)
-4. Access the video from another device at:
-
-   ```
-   http://<your-public-ip>:3000
-   ```
-
-   Or if on LAN:
-
-   ```
-   http://<your-local-ip>:3000
-   ```
-
----
-
+1. Run `start.bat` in your folder
+2. Make sure your selected port is open in your firewall/router.
+3. Access the video from another device at the links given
+   
 ### 🌍 Option 2: Hamachi (Virtual LAN)
 
 1. Download and install [LogMeIn Hamachi](https://vpn.net).
 2. Create a network, have others join it.
 3. Share your **Hamachi IP address** (shown in Hamachi).
-4. Run `server.js`, then visit:
-
-   ```
-   http://<your-hamachi-ip>:3000
-   ```
-
----
+4. Run `start.bat`, then visit the `Your Network` link
 
 ### 🚂 Option 3: Hosting on Render (Free Cloud Hosting)
 
@@ -93,7 +70,7 @@ Click-based controls have been implemented for easy, mouse-only interaction:
 3. Connect your repository:
    [https://github.com/Lakunake/WebDisplays-Video-Player](https://github.com/Lakunake/WebDisplays-Video-Player)
 4. Choose the "RENDER" branch
-5. Set these scripts scripts to:
+5. Set these scripts to:
 
    ```json
    "start": "node server.js"
