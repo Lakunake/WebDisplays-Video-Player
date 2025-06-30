@@ -11,7 +11,7 @@ A FULLY synchronized HTML5 video player for Minecraft's WebDisplays mod using No
 ## 🚀 Requirements
 
 * [Node.js](https://nodejs.org/) installed on your machine (v16+ recommended)
-* [ffmpeg](https://ffmpeg.org/) installed on your machine for 1.3 and further versions if you want high bitrate support (7.1 below is not tested)
+* [ffmpeg](https://ffmpeg.org/) installed on your machine for 1.3 and further versions if you want high bitrate support and the video optimizer working (7.1 below is not tested)
 * A `.mp4` video file named `filmeva.mp4` placed in the `/videos/` folder
 
 ---
